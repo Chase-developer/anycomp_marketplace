@@ -1,9 +1,9 @@
 package com.chase.demo.controllers;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -13,10 +13,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.chase.demo.dto.PurchaseDTO;
 import com.chase.demo.entities.Buyer;
 import com.chase.demo.repositories.BuyerRepository;
+import com.chase.demo.services.BuyerService;
 
 @RestController
 @RequestMapping("/buyers")
@@ -24,52 +27,48 @@ public class BuyerController {
 	
 	@Autowired
 	private BuyerRepository buyerRepository;
+	
+	@Autowired
+	private BuyerService buyerService;
 
     @GetMapping
-    public ResponseEntity<List<Buyer>> getAllBuyers() {
+    public ResponseEntity<List<Buyer>> getAllBuyers(Pageable pageable) {
         // List all buyers
-        return ResponseEntity.ok(buyerRepository.findAll());
+        return ResponseEntity.ok(buyerRepository.findAll(pageable).getContent());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Buyer> getBuyerById(@PathVariable Long id) {
+    public ResponseEntity<Buyer> getBuyerById(@PathVariable("id") Long id) {
         // Get a specific buyer
-    	Optional<Buyer> buyer = buyerRepository.findById(id);
-    	if (buyer.isEmpty())
-    		return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(buyer.get());
+    	Buyer buyer = buyerService.getBuyer(id);
+        return buyer != null ? ResponseEntity.ok(buyer) : ResponseEntity.notFound().build();
     }
 
     @PostMapping
     public ResponseEntity<?> createBuyer(@RequestBody Buyer buyer) {
         // Create a buyer
-    	Optional<Buyer> existingBuyer = buyerRepository.findById(buyer.getId());
-
-        if (existingBuyer.isPresent()) {
-            return ResponseEntity
-                    .status(HttpStatus.CONFLICT)
-                    .body("A buyer with this email already exists.");
-        }
-
-        buyerRepository.save(buyer);
-        return ResponseEntity.status(HttpStatus.CREATED).body(buyer);
+    	return buyerService.createBuyer(buyer) ? ResponseEntity.status(HttpStatus.CREATED).body(buyer) :
+        	ResponseEntity.status(HttpStatus.CONFLICT).body("A buyer with this email already exists.");
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Buyer> updateBuyer(@PathVariable Long id, @RequestBody Buyer buyer) {
-    	Optional<Buyer> id_buyer = buyerRepository.findById(id);
-    	if (id_buyer.isEmpty())
-    		return ResponseEntity.notFound().build();
-    	id_buyer.get().update(buyer);
-        return ResponseEntity.ok(id_buyer.get());
+    public ResponseEntity<Void> updateBuyer(@PathVariable("id") Long id, @RequestBody Buyer buyer) {
+    	return buyerService.updateBuyer(id, buyer) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteBuyer(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteBuyer(@PathVariable("id") Long id) {
         // Delete a buyer
-    	if (buyerRepository.findById(id).isEmpty())
-    		return ResponseEntity.notFound().build();
-    	buyerRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+    	return buyerService.deleteBuyer(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    }
+    
+    @GetMapping("/{id}/purchases")
+    public ResponseEntity<List<PurchaseDTO>> getBuyerPurchases(@PathVariable("id") Long id, 
+    		@RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size) {
+        // Get Buyer Purchases
+    	List<PurchaseDTO> purchases = buyerService.getPurchases(id, size, page);
+    	System.out.println(purchases.size());
+    	return purchases != null ? ResponseEntity.ok(purchases) : ResponseEntity.notFound().build();
     }
 }

@@ -9,6 +9,6 @@ import com.chase.demo.entities.Seller;
 
 @Repository
 public interface SellerRepository extends JpaRepository<Seller, Long> {
-    // Custom queries can go here too
+
 	Optional<Seller> findByEmail(String email);
 }

@@ -1,13 +1,21 @@
 package com.chase.demo.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Item {
 
     @Id
@@ -24,66 +32,17 @@ public class Item {
 
     @ManyToOne
     @JoinColumn(name = "seller_id")
+    @JsonBackReference("seller-item")
     private Seller seller;
     
-    public Item() {
-    }
-
-    public Item(Long id, String name, String description, double price, int quantity) {
-        this.id = id;
-        this.name = name;
-        this.description = description;
-        this.price = price;
-        this.quantity = quantity;
+    public void removeQty(int qty)
+    {
+    	this.quantity -= qty;
     }
     
-    public void update(Item item)
+    public void addQty(int qty)
     {
-        this.name = item.name;
-        this.description = item.description;
-        this.price = item.price;
-        this.quantity = item.quantity;
+    	this.quantity += qty;
     }
     
-    public Long getId()
-    {
-    	return id;
-    }
-    
-    public void setId(Long id)
-    {
-    	this.id = id;
-    }
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public String getDescription() {
-		return description;
-	}
-
-	public void setDescription(String description) {
-		this.description = description;
-	}
-
-	public double getPrice() {
-		return price;
-	}
-
-	public void setPrice(double price) {
-		this.price = price;
-	}
-
-	public int getQuantity() {
-		return quantity;
-	}
-
-	public void setQuantity(int quantity) {
-		this.quantity = quantity;
-	}
 }

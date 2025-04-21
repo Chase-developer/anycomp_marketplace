@@ -1,9 +1,9 @@
 package com.chase.demo.controllers;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.chase.demo.entities.Item;
 import com.chase.demo.entities.Seller;
 import com.chase.demo.repositories.SellerRepository;
+import com.chase.demo.services.SellerService;
 
 @RestController
 @RequestMapping("/sellers")
@@ -24,56 +26,54 @@ public class SellerController {
 	
 	@Autowired
 	private SellerRepository sellerRepository;
+	
+	@Autowired
+	private SellerService sellerService;
 
     @GetMapping
-    public ResponseEntity<List<Seller>> getAllSellers() {
+    public ResponseEntity<List<Seller>> getAllSellers(Pageable pageable) {
         // List all sellers
-    	return ResponseEntity.ok(sellerRepository.findAll());
+    	return ResponseEntity.ok(sellerRepository.findAll(pageable).getContent());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Seller> getSellerById(@PathVariable Long id) {
+    public ResponseEntity<Seller> getSellerById(@PathVariable("id") Long id) {
         // Get a specific seller
-    	Optional<Seller> seller = sellerRepository.findById(id);
-    	if (seller.isEmpty())
-    		return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(seller.get());
+    	Seller seller = sellerService.getSeller(id);
+        return seller == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(seller);
     }
 
     @PostMapping
     public ResponseEntity<?> createSeller(@RequestBody Seller seller) {
         // Create a seller
-        Optional<Seller> existingBuyer = sellerRepository.findByEmail(seller.getEmail());
-        
-
-        if (existingBuyer.isPresent()) {
-            return ResponseEntity
-                    .status(HttpStatus.CONFLICT)
-                    .body("A buyer with this email already exists.");
-        }
-
-        sellerRepository.save(seller);
-        return ResponseEntity.status(HttpStatus.CREATED).body(seller);
+        return sellerService.createSeller(seller) ? ResponseEntity.status(HttpStatus.CREATED).body(seller) :
+        	ResponseEntity.status(HttpStatus.CONFLICT).body("A buyer with this email already exists.");
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Seller> updateSeller(@PathVariable Long id, @RequestBody Seller seller) {
+    public ResponseEntity<Void> updateSeller(@PathVariable("id") Long id, @RequestBody Seller seller) {
         // Update a seller
-        
-        Optional<Seller> id_buyer = sellerRepository.findById(id);
-    	if (id_buyer.isEmpty())
-    		return ResponseEntity.notFound().build();
-    	id_buyer.get().update(seller);
-        return ResponseEntity.ok(id_buyer.get());
+        return sellerService.updateSeller(id, seller) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSeller(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteSeller(@PathVariable("id") Long id) {
         // Delete a seller
-        
-        if (sellerRepository.findById(id).isEmpty())
-    		return ResponseEntity.notFound().build();
-        sellerRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return sellerService.deleteSeller(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    }
+    
+    @GetMapping("/{id}/items")
+    public ResponseEntity<List<Item>> getItemsBySeller(@PathVariable("id") Long sellerId) {
+        // Get items by seller
+    	List<Item> items = sellerService.getSellerItems(sellerId);
+        return ResponseEntity.ok(items);
+    }
+
+    @PostMapping("/{id}/items")
+    public ResponseEntity<?> addItemToSeller(@PathVariable("id") Long sellerId, @RequestBody Item item) {
+        // Add new item to seller
+    	Item e_item = sellerService.addSellerItem(sellerId, item);
+        return e_item == null ? ResponseEntity.status(HttpStatus.NOT_FOUND).body("Seller Does Not Exist") 
+        		: ResponseEntity.status(HttpStatus.CREATED).body(e_item);
     }
 }
