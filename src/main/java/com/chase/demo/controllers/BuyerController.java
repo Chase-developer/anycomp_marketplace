@@ -68,7 +68,6 @@ public class BuyerController {
             @RequestParam(name = "size", defaultValue = "10") int size) {
         // Get Buyer Purchases
     	List<PurchaseDTO> purchases = buyerService.getPurchases(id, size, page);
-    	System.out.println(purchases.size());
     	return purchases != null ? ResponseEntity.ok(purchases) : ResponseEntity.notFound().build();
     }
 }
